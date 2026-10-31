@@ -865,3 +865,6 @@ fn main() -> Result<()> {
     transcription::cpu_floor::require();
     windows::run(&SHUTDOWN)
 }
+
+#[cfg(test)]
+mod code_shape_tests;
