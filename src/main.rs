@@ -124,6 +124,8 @@ mod vocabulary;
 mod voice_filter;
 #[cfg(target_os = "windows")]
 mod windows;
+#[cfg(target_os = "macos")]
+mod words_to_caret;
 
 #[cfg(target_os = "macos")]
 use std::path::PathBuf;

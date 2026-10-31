@@ -1351,6 +1351,9 @@ pub struct LabsSettings {
     /// Spoken punctuation and symbol words ("comma", "hashtag",
     /// "underscore") become characters joined to their words (issue 678).
     pub spoken_symbols: bool,
+    /// A pasted dictation's words fly from the HUD to the text cursor
+    /// (macOS).
+    pub words_to_caret: bool,
 }
 
 /// The idle times Labs › Unload model when idle offers, in minutes.
@@ -1375,6 +1378,7 @@ impl Default for LabsSettings {
             second_dictation_shortcut: false,
             smart_spacing: false,
             spoken_symbols: false,
+            words_to_caret: false,
         }
     }
 }

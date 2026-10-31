@@ -261,6 +261,13 @@ fn rows(ui: &Ui) -> Vec<Row> {
                 tr("Smart spacing"),
                 tr("Add a space before a dictation pasted right after a word"),
             ));
+            // Reads the cursor's position through macOS Accessibility.
+            rows.push(row(
+                Feature::WordsToCaret,
+                &HINTS,
+                tr("Words to cursor"),
+                tr("Pasted words fly from the HUD to the text cursor"),
+            ));
         }
     }
     rows.push(row(
@@ -335,6 +342,7 @@ fn row_key(feature: Feature) -> &'static str {
         Feature::SecondDictationShortcut => "lab-second-dictation-shortcut",
         Feature::SmartSpacing => "lab-smart-spacing",
         Feature::SpokenSymbols => "lab-spoken-symbols",
+        Feature::WordsToCaret => "lab-words-to-caret",
     }
 }
 

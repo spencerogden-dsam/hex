@@ -79,10 +79,11 @@ pub enum Feature {
     SecondDictationShortcut,
     SmartSpacing,
     SpokenSymbols,
+    WordsToCaret,
 }
 
 impl Feature {
-    pub const ALL: [Self; 21] = [
+    pub const ALL: [Self; 22] = [
         Self::Meetings,
         Self::VoiceFilter,
         Self::Playground,
@@ -104,6 +105,7 @@ impl Feature {
         Self::SecondDictationShortcut,
         Self::SmartSpacing,
         Self::SpokenSymbols,
+        Self::WordsToCaret,
     ];
 
     /// The features this OS and build have.
@@ -148,6 +150,7 @@ impl Feature {
             | Self::SecondDictationShortcut
             | Self::SmartSpacing
             | Self::SpokenSymbols => Audience::Everyone,
+            Self::WordsToCaret => Audience::Dev,
         }
     }
 
@@ -174,7 +177,8 @@ impl Feature {
             | Self::KeepOnClipboard
             | Self::CopyOnly
             | Self::SecondDictationShortcut
-            | Self::SmartSpacing => cfg!(target_os = "macos"),
+            | Self::SmartSpacing
+            | Self::WordsToCaret => cfg!(target_os = "macos"),
             Self::KeyboardModelSwitching => crate::keyboard_input_sources::available(),
             Self::Playground
             | Self::LiveText
@@ -211,6 +215,7 @@ impl Feature {
             Self::SecondDictationShortcut => "second-dictation-shortcut",
             Self::SmartSpacing => "smart-spacing",
             Self::SpokenSymbols => "spoken-symbols",
+            Self::WordsToCaret => "words-to-caret",
         }
     }
 
@@ -238,6 +243,7 @@ impl Feature {
             Self::SecondDictationShortcut => "labs.second_dictation_shortcut",
             Self::SmartSpacing => "labs.smart_spacing",
             Self::SpokenSymbols => "labs.spoken_symbols",
+            Self::WordsToCaret => "labs.words_to_caret",
         }
     }
 
@@ -288,6 +294,7 @@ impl Feature {
             Self::SpokenSymbols => {
                 "Turn spoken \"comma\", \"colon\", \"hashtag\", \"underscore\", and similar words into symbols joined to their words"
             }
+            Self::WordsToCaret => "Pasted words fly from the HUD to the text cursor",
         }
     }
 
@@ -319,6 +326,7 @@ impl Feature {
             Self::SecondDictationShortcut => settings.labs.second_dictation_shortcut,
             Self::SmartSpacing => settings.labs.smart_spacing,
             Self::SpokenSymbols => settings.labs.spoken_symbols,
+            Self::WordsToCaret => settings.labs.words_to_caret,
         }
     }
 
@@ -345,6 +353,7 @@ impl Feature {
             Self::SecondDictationShortcut => settings.labs.second_dictation_shortcut = on,
             Self::SmartSpacing => settings.labs.smart_spacing = on,
             Self::SpokenSymbols => settings.labs.spoken_symbols = on,
+            Self::WordsToCaret => settings.labs.words_to_caret = on,
         }
     }
 }
@@ -364,8 +373,9 @@ const FILLER_WORDS: u32 = 1 << 10;
 const SUBTITLE_EXPORT: u32 = 1 << 11;
 const SMART_SPACING: u32 = 1 << 12;
 const SPOKEN_SYMBOLS: u32 = 1 << 13;
+const WORDS_TO_CARET: u32 = 1 << 14;
 /// Unload-idle minutes sit above the switches.
-const MINUTES_SHIFT: u32 = 14;
+const MINUTES_SHIFT: u32 = 15;
 
 /// This process's `labs` switches: unknown until settings load or one is
 /// first read.
@@ -457,6 +467,13 @@ pub fn smart_spacing() -> bool {
     on(SMART_SPACING)
 }
 
+/// A pasted dictation's words fly from the HUD to the text cursor (macOS;
+/// read as each paste commits).
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub fn words_to_caret() -> bool {
+    on(WORDS_TO_CARET)
+}
+
 /// How long the speech model may sit unused before the engine unloads it,
 /// while Labs › Unload model when idle is on.
 pub fn unload_idle() -> Option<std::time::Duration> {
@@ -515,6 +532,11 @@ fn encode_where(settings: &LabsSettings, reaches: impl Fn(Feature) -> bool) -> u
             Feature::SpokenSymbols,
             settings.spoken_symbols,
             SPOKEN_SYMBOLS,
+        ),
+        (
+            Feature::WordsToCaret,
+            settings.words_to_caret,
+            WORDS_TO_CARET,
         ),
     ]
     .into_iter()
@@ -703,6 +725,18 @@ mod tests {
     }
 
     #[test]
+    fn words_to_caret_runs_only_in_dev_builds() {
+        assert_eq!(Feature::WordsToCaret.audience(), Audience::Dev);
+        let labs = LabsSettings {
+            words_to_caret: true,
+            ..LabsSettings::default()
+        };
+        let reaches = |dev_build| move |feature: Feature| feature.audience().reaches(dev_build);
+        assert_eq!(encode_where(&labs, reaches(false)) & WORDS_TO_CARET, 0);
+        assert_ne!(encode_where(&labs, reaches(true)) & WORDS_TO_CARET, 0);
+    }
+
+    #[test]
     fn settings_keys_name_their_feature() {
         for feature in Feature::ALL {
             assert_eq!(
@@ -787,6 +821,19 @@ mod tests {
         assert_ne!(state & SPOKEN_SYMBOLS, 0);
         assert_eq!(state & SPOKEN_FORMATTING, 0);
         assert_eq!(state & SMART_SPACING, 0);
+        assert_eq!(state >> MINUTES_SHIFT, 24 * 60);
+    }
+
+    #[test]
+    fn words_to_caret_is_its_own_bit_and_off_by_default() {
+        let mut labs = LabsSettings::default();
+        assert_eq!(encode(&labs) & WORDS_TO_CARET, 0);
+        labs.words_to_caret = true;
+        labs.unload_idle_minutes = 24 * 60;
+        let state = encode(&labs);
+        assert_ne!(state & WORDS_TO_CARET, 0);
+        assert_eq!(state & SMART_SPACING, 0);
+        assert_eq!(state & SPOKEN_SYMBOLS, 0);
         assert_eq!(state >> MINUTES_SHIFT, 24 * 60);
     }
 

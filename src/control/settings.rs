@@ -338,6 +338,11 @@ const KEYS: &[Key] = &[
         "Labs: add a space before a dictation pasted right after a word (macOS)",
     ),
     key(
+        "labs.words_to_caret",
+        Kind::Bool,
+        "Labs: pasted words fly from the HUD to the text cursor (macOS)",
+    ),
+    key(
         "meetings.enabled",
         Kind::Bool,
         "Labs: Meetings (beta), call detection, recording, and transcripts",
