@@ -265,7 +265,8 @@ call link, kept only for meetings recorded from a calendar reminder or a
 detected call matched to one), each entry's You/Them speaker, and the
 exported Markdown's text ([meeting-webhook.md](../meeting-webhook.md)).
 While on, a "Webhook address" field sits under the row (Enter or Save keeps
-it; empty clears it; also `hex settings set labs.meeting_webhook_url …`).
+it, and the button then reads "Saved" with a check and the description names
+the host until the address is edited; empty clears it; also `hex settings set labs.meeting_webhook_url …`).
 Only https, or http to localhost, is accepted. The gate,
 `labs::meeting_webhook()`, is read on the meetings controller as each
 meeting finishes and each notes pass ends; off, nothing is queued and no
@@ -281,8 +282,7 @@ and `the_payload_names_the_event_calendar_speakers_and_markdown` in
 [labs.rs](../../src/labs.rs);
 `meeting_webhook_shows_its_address_while_on_and_refuses_plain_http` in
 [panes.rs](../../src/rune_ui/tests/panes.rs). Not yet observed: a real
-meeting delivered to a live webhook; the `mac-labs-link` golden needs
-regenerating on Linux with the new row.
+meeting delivered to a live webhook.
 
 Second dictation shortcut (`second-dictation-shortcut`, issue 627, macOS):
 for a Globe/Fn shortcut on the laptop keyboard and another key on an

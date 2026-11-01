@@ -1600,6 +1600,19 @@ fn meeting_webhook_shows_its_address_while_on_and_refuses_plain_http() {
         Some("https://hooks.zapier.com/hooks/catch/1/a/")
     );
     assert!(rt.find("lab-meeting-webhook-error").is_none());
+    assert!(
+        rt.find("lab-meeting-webhook-saved").is_some(),
+        "Saved confirms it"
+    );
+    assert!(rt.find("lab-meeting-webhook-save").is_none());
+
+    rt.state.lab_webhook = TextEdit::new("https://hooks.zapier.com/hooks/catch/1/b/");
+    refresh(&mut rt);
+    assert!(
+        rt.find("lab-meeting-webhook-saved").is_none(),
+        "an edit is unsaved"
+    );
+    assert!(rt.find("lab-meeting-webhook-save").is_some());
 
     rt.state.lab_webhook = TextEdit::new("");
     refresh(&mut rt);

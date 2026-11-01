@@ -6,8 +6,7 @@
 use rune::{El, Icon, Tx, row, text};
 
 use super::controls::{
-    self, ButtonKind, CardRow, Paint, button, card, icon_row, icon_row_tagged, pressable_row,
-    row_switch,
+    self, CardRow, Paint, PushSize, card, icon_row, icon_row_tagged, pressable_row, row_switch,
 };
 use super::icons::{BOOK, GLOBE, HINTS, KEYBOARD, MOUSE, SPARKLES, TERMINAL, TIMER, WAVE};
 use super::lists::{Tone, tone_tag};
@@ -502,23 +501,48 @@ fn webhook_url_row(ui: &Ui, p: Paint) -> CardRow {
         .on_submit(|ui: &mut Ui, _| save_webhook_url(ui))
         .build(p.k)
         .key("lab-meeting-webhook-url-field");
+    // The button reads the saved setting, so "Saved" shows only once the
+    // address is really kept, and editing it brings Save back.
+    let saved = ui
+        .settings
+        .labs
+        .meeting_webhook_url
+        .as_deref()
+        .unwrap_or("");
+    let unchanged = ui.lab_webhook.text.trim() == saved;
+    let save = if unchanged && !saved.is_empty() {
+        rune_kit::Button::new(tr("Saved"))
+            .variant(rune_kit::ButtonVariant::Neutral)
+            .icon(&rune_kit::glyphs::CHECK)
+            .disabled(true)
+            .build_push(p.k)
+            .key("lab-meeting-webhook-saved")
+    } else {
+        rune_kit::Button::new(tr("Save"))
+            .variant(rune_kit::ButtonVariant::Neutral)
+            .disabled(unchanged)
+            .on_press_tx(|ui: &mut Ui, _| save_webhook_url(ui))
+            .build_push(p.k)
+            .key("lab-meeting-webhook-save")
+    };
+    let host = url::Url::parse(saved)
+        .ok()
+        .and_then(|url| url.host_str().map(str::to_string));
+    let description = match &host {
+        Some(host) => tr_fill("Sending finished meetings to {}", host),
+        None => tr("An https address you control, or http to this computer").to_string(),
+    };
     controls::setting_row(
         p,
         "lab-meeting-webhook-url",
         tr("Webhook address"),
-        Some(tr("An https address you control, or http to this computer")),
+        Some(&description),
         row()
             .key("controls")
             .gap(8.0)
             .center_y()
             .child(field)
-            .child(button(
-                p,
-                "lab-meeting-webhook-save",
-                tr("Save"),
-                ButtonKind::Secondary,
-                |ui: &mut Ui, _| save_webhook_url(ui),
-            )),
+            .child(save),
     )
     .into()
 }
