@@ -762,6 +762,10 @@ pub(crate) struct Ui {
     labs_open: bool,
     /// The Labs row a link just opened, pulsing until it is cleared.
     lab_flash: Option<(crate::labs::Feature, Instant)>,
+    /// Labs › Meeting webhook's address as typed, saved on Save or Enter.
+    lab_webhook: rune::TextEdit,
+    /// Why the typed address wasn't saved.
+    lab_webhook_error: Option<String>,
     /// A scene previewing the badge of a build kind this binary is not.
     build_preview: Option<BuildKind>,
     capture: Capture,
@@ -841,6 +845,13 @@ impl Ui {
     fn with(settings: AppSettings, service: Service) -> Self {
         let modes = modes::ModesPane::new(&settings);
         let vocabulary = vocabulary::VocabularyEditor::new(&settings.vocabulary);
+        let lab_webhook = rune::TextEdit::new(
+            settings
+                .labs
+                .meeting_webhook_url
+                .clone()
+                .unwrap_or_default(),
+        );
         Self {
             settings,
             service,
@@ -860,6 +871,8 @@ impl Ui {
             advanced: Vec::new(),
             labs_open: false,
             lab_flash: None,
+            lab_webhook,
+            lab_webhook_error: None,
             build_preview: None,
             capture: Capture::Idle,
             vocabulary,

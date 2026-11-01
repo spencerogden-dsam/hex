@@ -922,7 +922,9 @@ is to quit Hex, remove the `.app` suffix from
 [Meetings (beta)](meetings.md) maps the opt-in (the Meetings pane's card, then
 Meetings › Settings), call detection and the
 focus-free offer, menu-bar recording state, rolling transcription, echo
-suppression, and the Markdown copy in the user's transcript folder.
+suppression, and the Markdown copy in the user's transcript folder. With
+Labs › Meeting webhook on, each finished meeting and its notes are also
+POSTed as JSON to the user's address ([meeting-webhook.md](../meeting-webhook.md)).
 
 ## Experimental: Hex Microphone And Voice Filter
 

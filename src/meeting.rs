@@ -50,6 +50,7 @@ pub(crate) mod runtime;
 mod transcript;
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub(crate) mod watcher;
+pub(crate) mod webhook;
 #[cfg(all(debug_assertions, target_os = "macos"))]
 pub use chapters::chapters_file;
 #[cfg(target_os = "macos")]
@@ -90,12 +91,25 @@ pub enum TitleSource {
 }
 
 /// The calendar event behind a meeting: its title and the other attendees,
-/// kept as context for the transcript and its notes.
+/// kept as context for the transcript and its notes, plus the event's
+/// identity, times, and call link for the meeting webhook (Labs). Meetings
+/// recorded before those were kept read them as absent.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MeetingCalendar {
     pub title: String,
     #[serde(default)]
     pub attendees: Vec<String>,
+    /// The calendar's event identifier (EventKit `eventIdentifier`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_id: Option<String>,
+    /// The scheduled start and end, Unix milliseconds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_ms: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end_ms: Option<i64>,
+    /// The call link found in the event.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link: Option<String>,
 }
 
 /// What the recorder reports to its owner while it runs.

@@ -1573,6 +1573,44 @@ fn hud_lab_picks_dot_scope_processing_placement_and_level() {
 }
 
 #[test]
+fn meeting_webhook_shows_its_address_while_on_and_refuses_plain_http() {
+    let mut rt = runtime("mac-production", true, (980.0, 2400.0));
+    tap(&mut rt, "nav-labs");
+    assert!(rt.find("lab-meeting-webhook").is_some());
+    assert!(!rt.state.settings.labs.meeting_webhook);
+    assert!(
+        rt.find("lab-meeting-webhook-url").is_none(),
+        "hidden while off"
+    );
+    tap(&mut rt, "lab-meeting-webhook");
+    assert!(rt.state.settings.labs.meeting_webhook);
+    assert!(rt.find("lab-meeting-webhook-url").is_some());
+
+    rt.state.lab_webhook = TextEdit::new("http://example.com/hook");
+    refresh(&mut rt);
+    tap(&mut rt, "lab-meeting-webhook-save");
+    assert_eq!(rt.state.settings.labs.meeting_webhook_url, None);
+    assert!(rt.find("lab-meeting-webhook-error").is_some());
+
+    rt.state.lab_webhook = TextEdit::new(" https://hooks.zapier.com/hooks/catch/1/a/ ");
+    refresh(&mut rt);
+    tap(&mut rt, "lab-meeting-webhook-save");
+    assert_eq!(
+        rt.state.settings.labs.meeting_webhook_url.as_deref(),
+        Some("https://hooks.zapier.com/hooks/catch/1/a/")
+    );
+    assert!(rt.find("lab-meeting-webhook-error").is_none());
+
+    rt.state.lab_webhook = TextEdit::new("");
+    refresh(&mut rt);
+    tap(&mut rt, "lab-meeting-webhook-save");
+    assert_eq!(
+        rt.state.settings.labs.meeting_webhook_url, None,
+        "empty clears it"
+    );
+}
+
+#[test]
 fn labs_is_one_flat_list_of_toggles_off_by_default() {
     let mut rt = runtime("mac-production", true, (980.0, 2000.0));
     rt.state.settings.experimental.hex_microphone = false;

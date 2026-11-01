@@ -6,7 +6,8 @@
 use rune::{El, Icon, Tx, row, text};
 
 use super::controls::{
-    self, CardRow, Paint, card, icon_row, icon_row_tagged, pressable_row, row_switch,
+    self, ButtonKind, CardRow, Paint, button, card, icon_row, icon_row_tagged, pressable_row,
+    row_switch,
 };
 use super::icons::{BOOK, GLOBE, HINTS, KEYBOARD, MOUSE, SPARKLES, TERMINAL, TIMER, WAVE};
 use super::lists::{Tone, tone_tag};
@@ -206,6 +207,12 @@ fn rows(ui: &Ui) -> Vec<Row> {
             tr("Subtitle export"),
             tr("Export meeting transcripts as SRT or VTT subtitles with hex meetings show"),
         ));
+        rows.push(row(
+            Feature::MeetingWebhook,
+            &GLOBE,
+            tr("Meeting webhook"),
+            tr("Send each finished meeting's transcript, then its notes, as JSON to your webhook"),
+        ));
     }
     rows.push(row(
         Feature::VocabularyBiasing,
@@ -350,6 +357,7 @@ fn row_key(feature: Feature) -> &'static str {
         Feature::SpokenSymbols => "lab-spoken-symbols",
         Feature::PickerSortFilter => "lab-picker-sort-filter",
         Feature::SidedChords => "lab-sided-modifier-chords",
+        Feature::MeetingWebhook => "lab-meeting-webhook",
     }
 }
 
@@ -402,12 +410,19 @@ pub(super) fn page(ui: &Ui, p: Paint) -> El {
     let mut cards: Vec<CardRow> = Vec::new();
     for row in rows(ui).into_iter().filter(|row| row.feature.shipped()) {
         let unload_idle = row.feature == Feature::UnloadIdle && row.on;
+        let webhook = row.feature == Feature::MeetingWebhook && row.on;
         let flashing = ui
             .lab_flash
             .is_some_and(|(feature, _)| feature == row.feature);
         cards.push(feature_row(p, row, flashing));
         if unload_idle {
             cards.push(unload_after_row(ui, p));
+        }
+        if webhook {
+            cards.push(webhook_url_row(ui, p));
+            if let Some(error) = &ui.lab_webhook_error {
+                cards.push(controls::note("lab-meeting-webhook-error", error, p.danger()).into());
+            }
         }
     }
     let rows = cards;
@@ -475,6 +490,49 @@ fn unload_after_row(ui: &Ui, p: Paint) -> CardRow {
         }),
     )
     .into()
+}
+
+/// Where Meeting webhook sends, under its row while on. Enter or Save
+/// keeps the address; an empty one clears it.
+fn webhook_url_row(ui: &Ui, p: Paint) -> CardRow {
+    let field = rune_kit::TextInput::new(&ui.lab_webhook)
+        .placeholder("https://hooks.zapier.com/…")
+        .width(Some(300.0))
+        .on_edit(|ui: &mut Ui| &mut ui.lab_webhook)
+        .on_submit(|ui: &mut Ui, _| save_webhook_url(ui))
+        .build(p.k)
+        .key("lab-meeting-webhook-url-field");
+    controls::setting_row(
+        p,
+        "lab-meeting-webhook-url",
+        tr("Webhook address"),
+        Some(tr("An https address you control, or http to this computer")),
+        row()
+            .key("controls")
+            .gap(8.0)
+            .center_y()
+            .child(field)
+            .child(button(
+                p,
+                "lab-meeting-webhook-save",
+                tr("Save"),
+                ButtonKind::Secondary,
+                |ui: &mut Ui, _| save_webhook_url(ui),
+            )),
+    )
+    .into()
+}
+
+fn save_webhook_url(ui: &mut Ui) {
+    let typed = ui.lab_webhook.text.trim().to_string();
+    if !typed.is_empty() && crate::meeting::webhook::check_url(&typed).is_err() {
+        ui.lab_webhook_error =
+            Some(tr("Use an https:// address, or http:// to this computer").to_string());
+        return;
+    }
+    ui.lab_webhook_error = None;
+    let url = (!typed.is_empty()).then_some(typed);
+    ui.update(|settings| settings.labs.meeting_webhook_url = url);
 }
 
 /// Runs the first run again (`onboarding_kit::live::restart`).

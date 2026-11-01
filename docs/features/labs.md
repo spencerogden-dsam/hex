@@ -42,6 +42,8 @@ Feature             Pane  Toggle (settings.json, hex settings)   On: what it doe
 │                                        another shortcut dictates like the main one (#627); General shows its recorder while on
 ├── Smart spacing   no    labs.smart_spacing           (macOS)   a dictation pasted right after a word gets one leading space (#632)
 ├── Sided modifier chords no labs.sided_modifier_chords (macOS) the recorder keeps each modifier's side in a modifier-only chord: R⌘ R⌥ (#710)
+├── Meeting webhook no    labs.meeting_webhook + labs.meeting_webhook_url
+│                                        each finished meeting's transcript, then its notes, POSTed as JSON (docs/meeting-webhook.md)
 ├── Sort and filter models no labs.picker_sort_filter   the Local transcription picker sorts by recommendation, size, or name and can show only models for the saved language (#645)
 └── Terminal paste  no    paste_with_shift             (Windows) paste with Ctrl+Shift+V (#477/#478; Linux keeps it in General)
 
@@ -251,6 +253,36 @@ window yet. Checks:
 [labs.rs](../../src/labs.rs). Not yet observed: a real meeting exported and
 loaded in a player; the Labs page goldens need regenerating on Linux with the
 new row.
+
+Meeting webhook (`meeting-webhook`; its row shows wherever Meetings does):
+while on, each meeting whose final transcript is published (after Stop, or
+the next launch's pending final pass) is POSTed as JSON to
+`labs.meeting_webhook_url` as `meeting.transcribed`, then once its notes
+pass ends as `meeting.notes` or `meeting.notes_failed`; `notes_pending`
+says whether the second event will come. The body is `hex meetings show
+--json`'s shape plus the event, the calendar event (id, times, attendees,
+call link, kept only for meetings recorded from a calendar reminder or a
+detected call matched to one), each entry's You/Them speaker, and the
+exported Markdown's text ([meeting-webhook.md](../meeting-webhook.md)).
+While on, a "Webhook address" field sits under the row (Enter or Save keeps
+it; empty clears it; also `hex settings set labs.meeting_webhook_url …`).
+Only https, or http to localhost, is accepted. The gate,
+`labs::meeting_webhook()`, is read on the meetings controller as each
+meeting finishes and each notes pass ends; off, nothing is queued and no
+curl runs. One `meeting-webhook` thread sends from a 16-event queue (more
+are dropped and logged) through `curl`, the address on its stdin config and
+the body in an owner-only temporary file, removed after;
+no redirects, 30 s per attempt, network failures, 429, and 5xx retried after
+5 s and 30 s. Results go to process.log only. Checks:
+`addresses_are_https_or_local_http`, `the_config_line_quotes_the_address`,
+and `the_payload_names_the_event_calendar_speakers_and_markdown` in
+[meeting/webhook.rs](../../src/meeting/webhook.rs);
+`meeting_webhook_is_its_own_bit_and_off_by_default` in
+[labs.rs](../../src/labs.rs);
+`meeting_webhook_shows_its_address_while_on_and_refuses_plain_http` in
+[panes.rs](../../src/rune_ui/tests/panes.rs). Not yet observed: a real
+meeting delivered to a live webhook; the `mac-labs-link` golden needs
+regenerating on Linux with the new row.
 
 Second dictation shortcut (`second-dictation-shortcut`, issue 627, macOS):
 for a Globe/Fn shortcut on the laptop keyboard and another key on an

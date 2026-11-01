@@ -1090,6 +1090,7 @@ mod tests {
         let calendar = crate::meeting::MeetingCalendar {
             title: "Q4 launch sync".into(),
             attendees: vec!["Ana Ruiz".into(), " ".into(), "Ben Ito".into()],
+            ..Default::default()
         };
         let mut prompts = Vec::new();
         summarize_with_calendar(

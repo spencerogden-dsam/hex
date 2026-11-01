@@ -348,6 +348,16 @@ const KEYS: &[Key] = &[
         "Labs: the shortcut recorder keeps which side each modifier of a modifier-only chord is on, such as Right Command + Right Option (macOS)",
     ),
     key(
+        "labs.meeting_webhook",
+        Kind::Bool,
+        "Labs: POST each finished meeting's transcript, then its notes, as JSON to labs.meeting_webhook_url",
+    ),
+    optional(
+        "labs.meeting_webhook_url",
+        Kind::Text,
+        "Labs: the meeting webhook's address (https, or http to this computer); none clears it",
+    ),
+    key(
         "meetings.enabled",
         Kind::Bool,
         "Labs: Meetings (beta), call detection, recording, and transcripts",
@@ -533,6 +543,7 @@ const NEEDS: &[(&str, &str)] = &[
     ("meetings.", "meetings"),
     ("labs.live_chapters", "meetings"),
     ("labs.subtitle_export", "meetings"),
+    ("labs.meeting_webhook", "meetings"),
     ("experimental.hex_microphone", "fun"),
     ("show_dock_icon", "dock_icon"),
     ("keyboard_model_switching.", "keyboard_model_switching"),
@@ -988,6 +999,10 @@ fn parse(key: &Key, raw: &str, shortcuts: &ShortcutRules) -> Result<Value, Contr
             } else {
                 Value::String((*choice).into())
             })
+        }
+        Kind::Text if name == "labs.meeting_webhook_url" => {
+            crate::meeting::webhook::check_url(trimmed).map_err(|why| invalid(name, &why))?;
+            Ok(Value::String(trimmed.into()))
         }
         Kind::Text => Ok(Value::String(raw.into())),
         Kind::Path => {

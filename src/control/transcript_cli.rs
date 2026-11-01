@@ -359,7 +359,11 @@ fn meeting_row(meeting: &Meeting, now: u64) -> MeetingRow<'_> {
     }
 }
 
-fn meeting_json(meeting: &Meeting, range: OffsetRange, now: u64) -> Result<serde_json::Value> {
+pub(crate) fn meeting_json(
+    meeting: &Meeting,
+    range: OffsetRange,
+    now: u64,
+) -> Result<serde_json::Value> {
     let notes = meeting.manifest.notes.as_ref().map(|notes| serde_json::json!({
         "title": notes.title, "summary": notes.summary, "generated_at_ms": notes.generated_at_ms,
     }));

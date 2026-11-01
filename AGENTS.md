@@ -41,7 +41,7 @@ Meetings (beta), Voice Filter (locked on while its macOS driver is
 installed), Playground, Live text, Live chapters, Vocabulary biasing, Switch
 model with keyboard language (#216), Mouse shortcuts (#209, macOS), Also
 pause the browser (#301, macOS), Share dictation shortcut (#176, Windows),
-Unload model when idle (#442), and Terminal paste (Windows). Externally contributed features land there too.
+Unload model when idle (#442), Meeting webhook, and Terminal paste (Windows). Externally contributed features land there too.
 Annotate is a normal feature in every build, stable included, on macOS,
 Linux, and Windows; only developer tools (`dev_build::is_dev_build()` with
 `DEVELOPER_FEATURES_ENABLED`) stay gated to dev builds.
@@ -428,6 +428,14 @@ substitute for source inspection or a second roadmap.
   lock-aware listing, in-memory BM25 full-text search with stemming and fuzzy
   matching, transcript paging, stored notes, and Markdown rendering. It never
   writes to the meetings folder.
+- `meeting/webhook`: Labs › Meeting webhook. Each published final
+  transcript (`meeting.transcribed`) and each ended notes pass
+  (`meeting.notes`, `meeting.notes_failed`) is POSTed as JSON (`hex meetings
+  show --json`'s shape plus the calendar event and the Markdown) to
+  `labs.meeting_webhook_url` (https, or http to localhost) through `curl`,
+  from one thread with a bounded queue and bounded retries; the address goes
+  on curl's stdin config and the body in an owner-only temp file, never
+  argv. Contract: `docs/meeting-webhook.md`.
 - `meeting/mcp`: the thin `rmcp` stdio adapter behind `hex mcp`, exposing
   `meeting/query` as read-only tools and `hex-meeting://` resources.
 - `apple_intelligence`: the weak-linked FoundationModels Swift bridge:

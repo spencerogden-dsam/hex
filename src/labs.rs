@@ -81,10 +81,11 @@ pub enum Feature {
     SpokenSymbols,
     PickerSortFilter,
     SidedChords,
+    MeetingWebhook,
 }
 
 impl Feature {
-    pub const ALL: [Self; 23] = [
+    pub const ALL: [Self; 24] = [
         Self::Meetings,
         Self::VoiceFilter,
         Self::Playground,
@@ -108,6 +109,7 @@ impl Feature {
         Self::SpokenSymbols,
         Self::PickerSortFilter,
         Self::SidedChords,
+        Self::MeetingWebhook,
     ];
 
     /// The features this OS and build have.
@@ -153,7 +155,8 @@ impl Feature {
             | Self::SmartSpacing
             | Self::SpokenSymbols
             | Self::PickerSortFilter
-            | Self::SidedChords => Audience::Everyone,
+            | Self::SidedChords
+            | Self::MeetingWebhook => Audience::Everyone,
         }
     }
 
@@ -162,6 +165,9 @@ impl Feature {
     pub fn for_settings_key(key: &str) -> Option<Self> {
         if key == "labs.unload_idle_minutes" {
             return Some(Self::UnloadIdle);
+        }
+        if key == "labs.meeting_webhook_url" {
+            return Some(Self::MeetingWebhook);
         }
         Self::ALL
             .into_iter()
@@ -191,6 +197,7 @@ impl Feature {
             | Self::SpokenFormatting
             | Self::SpokenSymbols
             | Self::PickerSortFilter
+            | Self::MeetingWebhook
             | Self::FillerWords => true,
         }
     }
@@ -221,6 +228,7 @@ impl Feature {
             Self::SpokenSymbols => "spoken-symbols",
             Self::PickerSortFilter => "picker-sort-filter",
             Self::SidedChords => "sided-modifier-chords",
+            Self::MeetingWebhook => "meeting-webhook",
         }
     }
 
@@ -250,6 +258,7 @@ impl Feature {
             Self::SpokenSymbols => "labs.spoken_symbols",
             Self::PickerSortFilter => "labs.picker_sort_filter",
             Self::SidedChords => "labs.sided_modifier_chords",
+            Self::MeetingWebhook => "labs.meeting_webhook",
         }
     }
 
@@ -306,6 +315,9 @@ impl Feature {
             Self::SidedChords => {
                 "Record which side each modifier of a shortcut is on, such as Right Command + Right Option"
             }
+            Self::MeetingWebhook => {
+                "Send each finished meeting's transcript, then its notes, as JSON to your webhook (labs.meeting_webhook_url)"
+            }
         }
     }
 
@@ -339,6 +351,7 @@ impl Feature {
             Self::SpokenSymbols => settings.labs.spoken_symbols,
             Self::PickerSortFilter => settings.labs.picker_sort_filter,
             Self::SidedChords => settings.labs.sided_modifier_chords,
+            Self::MeetingWebhook => settings.labs.meeting_webhook,
         }
     }
 
@@ -367,6 +380,7 @@ impl Feature {
             Self::SpokenSymbols => settings.labs.spoken_symbols = on,
             Self::PickerSortFilter => settings.labs.picker_sort_filter = on,
             Self::SidedChords => settings.labs.sided_modifier_chords = on,
+            Self::MeetingWebhook => settings.labs.meeting_webhook = on,
         }
     }
 }
@@ -387,8 +401,9 @@ const SUBTITLE_EXPORT: u32 = 1 << 11;
 const SMART_SPACING: u32 = 1 << 12;
 const SPOKEN_SYMBOLS: u32 = 1 << 13;
 const SIDED_CHORDS: u32 = 1 << 14;
+const MEETING_WEBHOOK: u32 = 1 << 15;
 /// Unload-idle minutes sit above the switches.
-const MINUTES_SHIFT: u32 = 15;
+const MINUTES_SHIFT: u32 = 16;
 
 /// This process's `labs` switches: unknown until settings load or one is
 /// first read.
@@ -487,6 +502,12 @@ pub fn sided_modifier_chords() -> bool {
     on(SIDED_CHORDS)
 }
 
+/// Finished meetings and their notes go to the user's webhook (read as each
+/// meeting finishes and each notes pass ends).
+pub fn meeting_webhook() -> bool {
+    on(MEETING_WEBHOOK)
+}
+
 /// How long the speech model may sit unused before the engine unloads it,
 /// while Labs › Unload model when idle is on.
 pub fn unload_idle() -> Option<std::time::Duration> {
@@ -550,6 +571,11 @@ fn encode_where(settings: &LabsSettings, reaches: impl Fn(Feature) -> bool) -> u
             Feature::SidedChords,
             settings.sided_modifier_chords,
             SIDED_CHORDS,
+        ),
+        (
+            Feature::MeetingWebhook,
+            settings.meeting_webhook,
+            MEETING_WEBHOOK,
         ),
     ]
     .into_iter()
@@ -838,6 +864,22 @@ mod tests {
         assert_ne!(state & SIDED_CHORDS, 0);
         assert_eq!(state & SPOKEN_SYMBOLS, 0);
         assert_eq!(state >> MINUTES_SHIFT, 24 * 60);
+    }
+
+    #[test]
+    fn meeting_webhook_is_its_own_bit_and_off_by_default() {
+        let mut labs = LabsSettings::default();
+        assert_eq!(encode_where(&labs, |_| true) & MEETING_WEBHOOK, 0);
+        labs.meeting_webhook = true;
+        labs.unload_idle_minutes = 24 * 60;
+        let state = encode_where(&labs, |_| true);
+        assert_ne!(state & MEETING_WEBHOOK, 0);
+        assert_eq!(state & SIDED_CHORDS, 0);
+        assert_eq!(state >> MINUTES_SHIFT, 24 * 60);
+        assert_eq!(
+            Feature::for_settings_key("labs.meeting_webhook_url"),
+            Some(Feature::MeetingWebhook)
+        );
     }
 
     #[test]

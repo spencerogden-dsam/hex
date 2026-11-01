@@ -3925,6 +3925,7 @@ mod tests {
         manifest.calendar = Some(crate::meeting::MeetingCalendar {
             title: "Q4 launch sync".into(),
             attendees: vec!["Ana Ruiz".into(), "Ben Ito".into()],
+            ..Default::default()
         });
         let markdown = render_markdown(&manifest, &[]);
         assert!(markdown.contains("- **App:** Zoom\n- **Attendees:** Ana Ruiz, Ben Ito\n"));

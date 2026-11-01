@@ -282,7 +282,12 @@ impl PendingFinals {
                     match meeting::finish_pending(&id) {
                         Ok(Some(manifest)) => {
                             tracing::info!(meeting = id, "finished a pending meeting transcript");
-                            if meeting::notes_wanted() {
+                            let notes_pending = meeting::notes_wanted();
+                            meeting::webhook::send(
+                                &manifest.id,
+                                meeting::webhook::Event::Transcribed { notes_pending },
+                            );
+                            if notes_pending {
                                 start_notes(manifest.id, &events);
                             }
                         }
@@ -416,6 +421,10 @@ fn calendar_context(meeting: &CalendarMeeting) -> MeetingCalendar {
     MeetingCalendar {
         title: meeting.display_title(),
         attendees: meeting.attendees.clone(),
+        event_id: Some(meeting.id.clone()),
+        start_ms: Some(meeting.start_ms),
+        end_ms: Some(meeting.end_ms),
+        link: meeting.link.as_ref().map(|link| link.url.clone()),
     }
 }
 
@@ -655,8 +664,15 @@ fn poll_recording(
             .ok_or_else(|| eyre!("recording disappeared"))?;
         let event = match active.worker.join() {
             Ok(Ok(manifest)) => {
-                if manifest.status == meeting::MeetingStatus::Complete && meeting::notes_wanted() {
-                    start_notes(manifest.id.clone(), events);
+                if manifest.status == meeting::MeetingStatus::Complete {
+                    let notes_pending = meeting::notes_wanted();
+                    meeting::webhook::send(
+                        &manifest.id,
+                        meeting::webhook::Event::Transcribed { notes_pending },
+                    );
+                    if notes_pending {
+                        start_notes(manifest.id.clone(), events);
+                    }
                 }
                 ControllerEvent::Finished(Box::new(manifest))
             }
@@ -907,10 +923,18 @@ fn detect_meeting(
 /// whether generation succeeds or fails.
 fn start_notes(id: String, events: &SyncSender<ControllerEvent>) {
     let finished = events.clone();
-    if meeting::spawn_summary(id, move |result| {
-        if let Ok(manifest) = result {
+    let meeting_id = id.clone();
+    if meeting::spawn_summary(id, move |result| match result {
+        Ok(manifest) => {
+            meeting::webhook::send(&manifest.id, meeting::webhook::Event::Notes);
             let _ = finished.send(ControllerEvent::NotesFinished(Box::new(manifest)));
         }
+        Err(error) => meeting::webhook::send(
+            &meeting_id,
+            meeting::webhook::Event::NotesFailed {
+                error: error.to_string(),
+            },
+        ),
     }) {
         let _ = events.send(ControllerEvent::NotesStarted);
     }

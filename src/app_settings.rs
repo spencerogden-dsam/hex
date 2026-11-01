@@ -1374,6 +1374,11 @@ pub struct LabsSettings {
     /// The shortcut recorder keeps the side of each modifier in a
     /// modifier-only chord, such as Right ⌘ + Right ⌥ (macOS, issue 710).
     pub sided_modifier_chords: bool,
+    /// Finished meetings and their notes are POSTed as JSON to
+    /// `meeting_webhook_url`.
+    pub meeting_webhook: bool,
+    /// The meeting webhook's address: https, or http to this computer.
+    pub meeting_webhook_url: Option<String>,
 }
 
 /// The idle times Labs › Unload model when idle offers, in minutes.
@@ -1400,6 +1405,8 @@ impl Default for LabsSettings {
             spoken_symbols: false,
             picker_sort_filter: false,
             sided_modifier_chords: false,
+            meeting_webhook: false,
+            meeting_webhook_url: None,
         }
     }
 }

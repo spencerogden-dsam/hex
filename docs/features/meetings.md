@@ -39,6 +39,10 @@ Subtitles -> hex meetings show <id> --srt | --vtt   // Labs › Subtitle export,
              one cue per transcript entry (You / Them), timed by entry offsets,
              not word timings; off -> refused naming hex labs on subtitle-export
              (docs/transcript-cli.md; no export button in the window yet)
+Webhook -> Labs › Meeting webhook, off by default: final transcript published
+           -> POST meeting.transcribed; notes pass ends -> meeting.notes |
+           meeting.notes_failed; JSON = show --json + calendar event + Markdown
+           (docs/meeting-webhook.md; curl, https or local http, logged only)
 ```
 
 Requires the selected local dictation model, Microphone, and System Audio
